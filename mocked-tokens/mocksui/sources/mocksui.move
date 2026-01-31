@@ -23,7 +23,7 @@ public fun new_currency(registry: &mut CoinRegistry, ctx: &mut TxContext) {
     let ( currency,  treasury_cap) = coin_registry::new_currency<MockedSUI>(
         registry,
         6, // Decimals
-        b"SUI".to_string(), // Symbol
+        b"mSUI".to_string(), // Symbol
         b"Mocked SUI".to_string(), // Name
         b"Mocked SUI Token.".to_string(), // Description
         b"https://testnet.suivision.xyz/images/coins/sui.svg".to_string(), // Icon URL
