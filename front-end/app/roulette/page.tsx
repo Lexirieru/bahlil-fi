@@ -4,46 +4,40 @@ import { useState } from "react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { WalletConnectButton } from "../components/connect-button";
 import { BalanceDisplay } from "../components/balance-display";
-import { BetSelector } from "../components/bet-selector";
 import { RouletteWheel } from "../components/roulette-wheel";
 import { useSpin } from "../hooks/use-spin";
-import { BetType, BET_TYPE_LABELS, BET_MULTIPLIERS, IDRX_DECIMALS } from "../lib/constants";
+import { IDRX_DECIMALS } from "../lib/constants";
 import Link from "next/link";
+
+// Multiplier odds table
+const MULTIPLIER_ODDS = [
+  { multiplier: "0x", probability: "25%", color: "bg-gray-600", description: "Lose all" },
+  { multiplier: "0.5x", probability: "35%", color: "bg-orange-600", description: "Half back" },
+  { multiplier: "1x", probability: "25%", color: "bg-yellow-600", description: "Break even" },
+  { multiplier: "2x", probability: "10%", color: "bg-green-600", description: "Double!" },
+  { multiplier: "5x", probability: "3.5%", color: "bg-blue-600", description: "5x win!" },
+  { multiplier: "10x", probability: "1.45%", color: "bg-purple-600", description: "10x win!" },
+  { multiplier: "100x", probability: "0.05%", color: "bg-pink-600", description: "JACKPOT!" },
+];
 
 export default function RoulettePage() {
   const account = useCurrentAccount();
   const { spin, isSpinning, result, error, clearError } = useSpin();
   
-  const [selectedBet, setSelectedBet] = useState<BetType | null>(null);
   const [betAmount, setBetAmount] = useState<string>("1");
-  const [wheelResult, setWheelResult] = useState<number | null>(null);
 
   const handleSpin = async () => {
-    if (selectedBet === null) {
-      alert("Please select a bet type");
-      return;
-    }
-
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0) {
       alert("Please enter a valid bet amount");
       return;
     }
 
-    // Start wheel animation
-    setWheelResult(null);
-    
-    const spinResult = await spin(selectedBet, amount);
-    
-    if (spinResult) {
-      // Generate a random number for visual effect (0-36)
-      const randomResult = Math.floor(Math.random() * 37);
-      setWheelResult(randomResult);
-    }
+    await spin(amount);
   };
 
-  const formatPayout = (payout: bigint) => {
-    return (Number(payout) / Math.pow(10, IDRX_DECIMALS)).toFixed(2);
+  const formatAmount = (amount: bigint) => {
+    return (Number(amount) / Math.pow(10, IDRX_DECIMALS)).toFixed(2);
   };
 
   return (
@@ -56,9 +50,9 @@ export default function RoulettePage() {
               <span className="text-3xl">🎰</span>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                  Bahlil Roulette
+                  Multiplier Roulette
                 </h1>
-                <p className="text-xs text-gray-500">Multiplier Roulette on Sui</p>
+                <p className="text-xs text-gray-500">Spin to win up to 100x!</p>
               </div>
             </Link>
           </div>
@@ -76,10 +70,10 @@ export default function RoulettePage() {
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
             <div className="text-8xl mb-6">🎲</div>
             <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-              Connect to Play Roulette
+              Connect to Play
             </h2>
             <p className="text-gray-400 mb-8 max-w-md">
-              Connect your wallet to start playing Multiplier Roulette on Sui blockchain with IDRX tokens.
+              Connect your wallet to spin the Multiplier Roulette and win up to 100x!
             </p>
             <WalletConnectButton />
           </div>
@@ -88,10 +82,13 @@ export default function RoulettePage() {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Left: Wheel and Controls */}
             <div className="flex flex-col items-center">
-              <RouletteWheel isSpinning={isSpinning} result={wheelResult} />
+              <RouletteWheel 
+                isSpinning={isSpinning} 
+                multiplier={result?.multiplier ?? null} 
+              />
               
               {/* Bet Amount Input */}
-              <div className="mt-8 w-full max-w-xs">
+              <div className="mt-8 w-full max-w-sm">
                 <label className="block text-sm text-gray-400 mb-2">Bet Amount (IDRX)</label>
                 <div className="relative">
                   <input
@@ -105,7 +102,7 @@ export default function RoulettePage() {
                     disabled={isSpinning}
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
-                    {[1, 5, 10].map((amt) => (
+                    {[1, 5, 10, 50].map((amt) => (
                       <button
                         key={amt}
                         onClick={() => setBetAmount(amt.toString())}
@@ -119,22 +116,12 @@ export default function RoulettePage() {
                 </div>
               </div>
 
-              {/* Selected Bet Display */}
-              {selectedBet !== null && (
-                <div className="mt-4 text-center">
-                  <p className="text-gray-400 text-sm">Selected Bet</p>
-                  <p className="text-xl font-bold text-white">
-                    {BET_TYPE_LABELS[selectedBet]} ({BET_MULTIPLIERS[selectedBet].num / BET_MULTIPLIERS[selectedBet].denom}x)
-                  </p>
-                </div>
-              )}
-
               {/* Spin Button */}
               <button
                 onClick={handleSpin}
-                disabled={isSpinning || selectedBet === null}
-                className={`mt-6 w-full max-w-xs py-4 px-8 rounded-2xl text-xl font-bold transition-all duration-300 ${
-                  isSpinning || selectedBet === null
+                disabled={isSpinning}
+                className={`mt-6 w-full max-w-sm py-4 px-8 rounded-2xl text-xl font-bold transition-all duration-300 ${
+                  isSpinning
                     ? "bg-gray-700 text-gray-500 cursor-not-allowed"
                     : "bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-gray-900 shadow-lg hover:shadow-yellow-500/25 hover:scale-105"
                 }`}
@@ -144,7 +131,7 @@ export default function RoulettePage() {
 
               {/* Error Display */}
               {error && (
-                <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 max-w-xs w-full">
+                <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 max-w-sm w-full">
                   <p className="text-sm">{error}</p>
                   <button
                     onClick={clearError}
@@ -158,33 +145,84 @@ export default function RoulettePage() {
               {/* Result Display */}
               {result && !isSpinning && (
                 <div
-                  className={`mt-4 p-4 rounded-xl max-w-xs w-full text-center animate-slide-in ${
+                  className={`mt-4 p-6 rounded-xl max-w-sm w-full text-center animate-slide-in ${
                     result.won
                       ? "bg-green-500/20 border border-green-500/50"
+                      : result.multiplier === 1
+                      ? "bg-yellow-500/20 border border-yellow-500/50"
                       : "bg-red-500/20 border border-red-500/50"
                   }`}
                 >
-                  <p className="text-2xl font-bold mb-2">
-                    {result.won ? "🎉 YOU WON!" : "😢 You Lost"}
-                  </p>
-                  {result.won && (
-                    <p className="text-xl text-green-400">
-                      +{formatPayout(result.payout)} IDRX
+                  {result.multiplier === 100 ? (
+                    <p className="text-3xl font-bold mb-2 animate-pulse">
+                      🎉 JACKPOT! 🎉
+                    </p>
+                  ) : result.won ? (
+                    <p className="text-2xl font-bold mb-2">
+                      🎉 YOU WON!
+                    </p>
+                  ) : result.multiplier === 1 ? (
+                    <p className="text-2xl font-bold mb-2">
+                      😐 Break Even
+                    </p>
+                  ) : (
+                    <p className="text-2xl font-bold mb-2">
+                      {result.multiplier === 0 ? "😢 Lost All" : "😕 Partial Loss"}
                     </p>
                   )}
-                  <p className="text-sm text-gray-400 mt-2">
-                    Bet: {formatPayout(result.deposit)} IDRX | Multiplier: {result.multiplierNum}/{result.multiplierDenom}x
+                  
+                  <p className="text-3xl font-bold mb-2">
+                    {result.multiplier}x
                   </p>
+                  
+                  <div className="text-sm text-gray-400 space-y-1">
+                    <p>Bet: {formatAmount(result.deposit)} IDRX</p>
+                    <p className={result.won ? "text-green-400 font-bold" : ""}>
+                      Payout: {formatAmount(result.payout)} IDRX
+                    </p>
+                    {result.won && (
+                      <p className="text-green-400 font-bold text-lg">
+                        +{formatAmount(result.payout - result.deposit)} IDRX profit!
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Right: Bet Selector */}
+            {/* Right: Multiplier Odds */}
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-3xl p-6 border border-gray-700">
               <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <span>🎯</span> Place Your Bet
+                <span>🎯</span> Multiplier Odds
               </h2>
-              <BetSelector selectedBet={selectedBet} onSelectBet={setSelectedBet} />
+              
+              <p className="text-gray-400 mb-6">
+                Spin the wheel and get a random multiplier! The higher the multiplier, the rarer it is.
+              </p>
+
+              <div className="space-y-3">
+                {MULTIPLIER_ODDS.map((odd, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-4 p-3 rounded-xl bg-gray-800/50 border border-gray-700"
+                  >
+                    <div className={`w-16 h-10 rounded-lg ${odd.color} flex items-center justify-center text-white font-bold`}>
+                      {odd.multiplier}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white font-medium">{odd.description}</p>
+                      <p className="text-sm text-gray-400">{odd.probability} chance</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                <p className="text-yellow-400 text-sm">
+                  ⚠️ <strong>House Edge:</strong> 2% fee is taken from each bet. 
+                  Expected value favors the house. Play responsibly!
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -193,7 +231,7 @@ export default function RoulettePage() {
       {/* Footer */}
       <footer className="border-t border-gray-800 mt-16">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-gray-500 text-sm">
-          <p>Bahlil Roulette • Built on Sui Blockchain • Play responsibly 🎲</p>
+          <p>Multiplier Roulette • Built on Sui Blockchain • Play responsibly 🎲</p>
         </div>
       </footer>
     </div>

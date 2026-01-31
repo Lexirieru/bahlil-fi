@@ -16,7 +16,6 @@ import {
   RANDOM_OBJECT_ID,
   IDRX_TYPE,
   IDRX_DECIMALS,
-  BetType,
 } from "../lib/constants";
 
 interface SpinResult {
@@ -25,6 +24,7 @@ interface SpinResult {
   multiplierNum: number;
   multiplierDenom: number;
   won: boolean;
+  multiplier: number;
 }
 
 export function useSpin() {
@@ -49,7 +49,7 @@ export function useSpin() {
   );
 
   const spin = useCallback(
-    async (betType: BetType, betAmount: number) => {
+    async (betAmount: number) => {
       if (!account?.address) {
         setError("Please connect your wallet");
         return null;
@@ -97,7 +97,7 @@ export function useSpin() {
           betCoin = splitCoin;
         }
 
-        // Call spin function
+        // Call spin function (no bet_type needed - it's multiplier roulette)
         tx.moveCall({
           target: `${ROULETTE_PACKAGE_ID}::roulette::spin`,
           typeArguments: [IDRX_TYPE],
@@ -138,13 +138,16 @@ export function useSpin() {
 
           const payout = BigInt(eventData.payout);
           const deposit = BigInt(eventData.deposit);
-          const won = payout > BigInt(0);
+          const multiplier =
+            eventData.multiplier_num / eventData.multiplier_denom;
+          const won = payout > deposit; // Win if payout > original deposit
 
           const spinResult: SpinResult = {
             payout,
             deposit,
             multiplierNum: eventData.multiplier_num,
             multiplierDenom: eventData.multiplier_denom,
+            multiplier,
             won,
           };
 
